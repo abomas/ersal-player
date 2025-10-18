@@ -1,36 +1,55 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ar">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>ERSALTV - Player</title>
 <style>
-  body { font-family: sans-serif; background:#0b0b12; color:#eee; margin:0; padding:16px; }
-  h1 { color:#0ff; margin-bottom:12px; }
-  #chlist { width:100%; padding:8px; margin-bottom:12px; border-radius:4px; }
-  #player { width:100%; max-height:60vh; background:#000; display:block; }
-  .note { font-size:13px; color:#bbb; margin-top:8px; }
+  body{font-family: sans-serif; margin:0; background:#0b0b12; color:#eee;}
+  .app{max-width:1100px;margin:0 auto;padding:16px;}
+  header{display:flex;align-items:center;gap:12px}
+  h1{margin:0;font-size:18px;color:#0ff}
+  #player{width:100%;max-height:60vh;background:#000;display:block;margin-top:12px}
+  .row{display:flex;gap:12px; margin-top:12px;align-items:flex-start}
+  .list{width:320px; max-height:60vh; overflow:auto; background:#081; padding:8px; border-radius:6px}
+  .list button{display:block;width:100%;margin:6px 0;padding:8px;border:none;background:#111;color:#fff;text-align:left;border-radius:4px;cursor:pointer}
+  .meta{flex:1;padding-left:8px}
+  .note{font-size:13px;color:#bbb;margin-top:8px}
 </style>
 </head>
 <body>
-<h1>ERSALTV - ???? ???????</h1>
+<div class="app">
+  <header>
+    <h1>ERSALTV — مشغل القنوات</h1>
+  </header>
 
-<select id="chlist"></select>
-<video id="player" controls playsinline></video>
-<div class="note">???? ???? ?? ??????? ?????. ???? ??? Chrome ? Safari ? Edge.</div>
+  <div class="row">
+    <div class="list" id="chlist">جارٍ تحميل القنوات...</div>
+    <div class="meta">
+      <video id="player" controls playsinline></video>
+      <div class="note">
+        اختر قناة من القائمة على اليمين. يعمل على متصفحات تدعم HLS (Chrome + hls.js).<br>
+        إن لم تعمل بعض القنوات فقد تكون روابطها غير HLS أو محمية من التشغيل المباشر.
+      </div>
+    </div>
+  </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <script>
-const WORKER_M3U = 'https://ersaltv.ahmedalghadani19.workers.dev/m3u';
+const WORKER_M3U = 'https://ersaltv.ahmedalghadani19.workers.dev/m3u'; // ضع رابط الـWorker هنا
 
-function parseM3U(text){
+function parseM3U(text) {
   const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
   const channels = [];
-  for(let i=0;i<lines.length;i++){
-    if(lines[i].startsWith('#EXTINF')){
-      const name = (lines[i].split(',')[1] || 'Channel').trim();
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].startsWith('#EXTINF')) {
+      const info = lines[i];
+      const name = (info.split(',')[1] || 'Channel').trim();
+      const logoMatch = info.match(/tvg-logo="([^"]+)"/);
+      const logo = logoMatch ? logoMatch[1] : '';
       const url = lines[i+1] || '';
-      channels.push({name,url});
+      channels.push({name, url, logo});
       i++;
     }
   }
@@ -39,38 +58,37 @@ function parseM3U(text){
 
 async function init(){
   const res = await fetch(WORKER_M3U);
-  if(!res.ok){ alert('??? ????? ????? ???????'); return; }
+  if (!res.ok) { document.getElementById('chlist').textContent = 'فشل تحميل قائمة القنوات'; return; }
   const txt = await res.text();
   const channels = parseM3U(txt);
-  const sel = document.getElementById('chlist');
-  sel.innerHTML = '';
-  channels.forEach(ch=>{
-    const opt = document.createElement('option');
-    opt.value = ch.url;
-    opt.textContent = ch.name;
-    sel.appendChild(opt);
+  const list = document.getElementById('chlist');
+  list.innerHTML = '';
+  channels.forEach((ch, idx) => {
+    const btn = document.createElement('button');
+    btn.textContent = ch.name;
+    btn.onclick = () => playChannel(ch);
+    list.appendChild(btn);
   });
-  sel.addEventListener('change', ()=>play(sel.value));
-  if(channels.length>0) play(channels[0].url);
+  if (channels.length===0) list.textContent = 'لا توجد قنوات في القائمة';
 }
 
 let hls;
-const player = document.getElementById('player');
-function play(url){
-  if(hls){ hls.destroy(); hls = null; }
-  if(Hls.isSupported()){
+const video = document.getElementById('player');
+function playChannel(ch){
+  const src = ch.url;
+  if (hls) { hls.destroy(); hls = null; }
+  if (Hls.isSupported()) {
     hls = new Hls();
-    hls.loadSource(url);
-    hls.attachMedia(player);
-    hls.on(Hls.Events.MANIFEST_PARSED, ()=>player.play().catch(()=>{}));
+    hls.loadSource(src);
+    hls.attachMedia(video);
+    hls.on(Hls.Events.MANIFEST_PARSED, function() { video.play().catch(()=>{}); });
   } else {
-    player.src = url;
-    player.play().catch(()=>{});
+    video.src = src;
+    video.play().catch(()=>{});
   }
 }
 
 init();
 </script>
 </body>
-
 </html>
