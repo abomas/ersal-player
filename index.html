@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ERSALTV - Player</title>
+<style>
+  body { font-family: sans-serif; background:#0b0b12; color:#eee; margin:0; padding:16px; }
+  h1 { color:#0ff; margin-bottom:12px; }
+  #chlist { width:100%; padding:8px; margin-bottom:12px; border-radius:4px; }
+  #player { width:100%; max-height:60vh; background:#000; display:block; }
+  .note { font-size:13px; color:#bbb; margin-top:8px; }
+</style>
+</head>
+<body>
+<h1>ERSALTV - ???? ???????</h1>
+
+<select id="chlist"></select>
+<video id="player" controls playsinline></video>
+<div class="note">???? ???? ?? ??????? ?????. ???? ??? Chrome ? Safari ? Edge.</div>
+
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<script>
+const WORKER_M3U = 'https://ersaltv.ahmedalghadani19.workers.dev/';
+
+function parseM3U(text){
+  const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
+  const channels = [];
+  for(let i=0;i<lines.length;i++){
+    if(lines[i].startsWith('#EXTINF')){
+      const name = (lines[i].split(',')[1] || 'Channel').trim();
+      const url = lines[i+1] || '';
+      channels.push({name,url});
+      i++;
+    }
+  }
+  return channels;
+}
+
+async function init(){
+  const res = await fetch(WORKER_M3U);
+  if(!res.ok){ alert('??? ????? ????? ???????'); return; }
+  const txt = await res.text();
+  const channels = parseM3U(txt);
+  const sel = document.getElementById('chlist');
+  sel.innerHTML = '';
+  channels.forEach(ch=>{
+    const opt = document.createElement('option');
+    opt.value = ch.url;
+    opt.textContent = ch.name;
+    sel.appendChild(opt);
+  });
+  sel.addEventListener('change', ()=>play(sel.value));
+  if(channels.length>0) play(channels[0].url);
+}
+
+let hls;
+const player = document.getElementById('player');
+function play(url){
+  if(hls){ hls.destroy(); hls = null; }
+  if(Hls.isSupported()){
+    hls = new Hls();
+    hls.loadSource(url);
+    hls.attachMedia(player);
+    hls.on(Hls.Events.MANIFEST_PARSED, ()=>player.play().catch(()=>{}));
+  } else {
+    player.src = url;
+    player.play().catch(()=>{});
+  }
+}
+
+init();
+</script>
+</body>
+</html>
