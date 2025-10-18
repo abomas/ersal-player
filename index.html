@@ -21,7 +21,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <script>
-const WORKER_M3U = 'https://ersaltv.ahmedalghadani19.workers.dev/';
+const WORKER_M3U = 'https://ersaltv.ahmedalghadani19.workers.dev/m3u';
 
 function parseM3U(text){
   const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
@@ -72,4 +72,5 @@ function play(url){
 init();
 </script>
 </body>
+
 </html>
